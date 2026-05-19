@@ -147,6 +147,7 @@ func (f *Framework) WebSocketDial(host, path string) *websocket.Conn {
 	defer cancel()
 
 	wsURL := url.URL{Scheme: "ws", Host: host, Path: path}
+	//nolint:bodyclose // coder/websocket.Dial documentation: "You never need to close resp.Body yourself"
 	conn, _, err := websocket.Dial(ctx, wsURL.String(), &websocket.DialOptions{
 		HTTPClient: &http.Client{
 			Transport: &http.Transport{
