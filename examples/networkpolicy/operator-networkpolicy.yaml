@@ -26,12 +26,12 @@ spec:
       app.kubernetes.io/instance: operator
       app.kubernetes.io/name: http
       app.kubernetes.io/part-of: keda
-  
+
   # Allow both ingress and egress (default deny all)
   policyTypes:
     - Ingress
     - Egress
-  
+
   ingress:
     # 1. Allow Prometheus metrics scraping
     # Optional: Remove if not using Prometheus monitoring
@@ -47,7 +47,7 @@ spec:
           port: 8080  # Metrics HTTP
         - protocol: TCP
           port: 8443  # Metrics HTTPS
-    
+
     # 2. Allow Kubernetes health probes
     # Kubelet needs to access liveness/readiness endpoints
     - from:
@@ -60,7 +60,7 @@ spec:
       ports:
         - protocol: TCP
           port: 8081  # Health probes
-  
+
   egress:
     # 1. Allow Kubernetes API server access
     # Required for:
@@ -80,7 +80,7 @@ spec:
           port: 443   # API server HTTPS
         - protocol: TCP
           port: 6443  # Alternative API server port
-    
+
     # 2. Allow DNS resolution
     # Required for service discovery
     - to:
@@ -95,7 +95,7 @@ spec:
           port: 53    # DNS
         - protocol: TCP
           port: 53    # DNS over TCP
-    
+
     # 3. Allow connections to CoreDNS (alternative DNS label)
     - to:
         - namespaceSelector:

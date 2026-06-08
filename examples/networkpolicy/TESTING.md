@@ -232,10 +232,10 @@ kubectl logs -n keda deployment/keda-operator | grep "external-scaler"
    ```bash
    # Interceptor
    kubectl exec -n keda deployment/keda-add-ons-http-interceptor -- nslookup kubernetes.default
-   
+
    # Operator
    kubectl exec -n keda deployment/keda-add-ons-http-operator -- nslookup kubernetes.default
-   
+
    # Scaler
    kubectl exec -n keda deployment/keda-add-ons-http-external-scaler -- nslookup kubernetes.default
    ```
