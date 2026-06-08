@@ -253,7 +253,7 @@ kubectl logs -n keda deployment/keda-operator | grep "external-scaler"
 **Steps**:
 1. Apply NetworkPolicies with Prometheus rules uncommented
 2. Check Prometheus targets: `kubectl port-forward -n monitoring svc/prometheus 9090:9090`
-3. Visit http://localhost:9090/targets
+3. Visit `http://localhost:9090/targets` in your browser
 4. Verify HTTP Add-on targets are UP
 
 **Expected Result**: All metrics endpoints are reachable.
