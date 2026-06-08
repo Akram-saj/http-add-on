@@ -1,0 +1,111 @@
+---
+# NetworkPolicy for KEDA HTTP Add-on Operator
+#
+# The Operator is a Kubernetes controller that:
+# - Watches HTTPScaledObject and InterceptorRoute custom resources
+# - Creates and manages KEDA ScaledObjects
+# - Performs leader election for high availability
+# - Exposes Prometheus metrics for monitoring
+#
+# This policy implements the principle of least privilege by:
+# - Allowing only necessary ingress traffic (metrics and probes)
+# - Restricting egress to Kubernetes API and DNS only
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: operator
+  namespace: keda
+  labels:
+    app.kubernetes.io/name: http-add-on
+    app.kubernetes.io/component: operator
+spec:
+  # Apply policy to operator pods
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: add-on
+      app.kubernetes.io/instance: operator
+      app.kubernetes.io/name: http
+      app.kubernetes.io/part-of: keda
+  
+  # Allow both ingress and egress (default deny all)
+  policyTypes:
+    - Ingress
+    - Egress
+  
+  ingress:
+    # 1. Allow Prometheus metrics scraping
+    # Optional: Remove if not using Prometheus monitoring
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: monitoring
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: prometheus
+      ports:
+        - protocol: TCP
+          port: 8080  # Metrics HTTP
+        - protocol: TCP
+          port: 8443  # Metrics HTTPS
+    
+    # 2. Allow Kubernetes health probes
+    # Kubelet needs to access liveness/readiness endpoints
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: kube-system
+          podSelector:
+            matchLabels:
+              component: kubelet
+      ports:
+        - protocol: TCP
+          port: 8081  # Health probes
+  
+  egress:
+    # 1. Allow Kubernetes API server access
+    # Required for:
+    # - Watching HTTPScaledObjects, InterceptorRoutes
+    # - Creating/updating ScaledObjects
+    # - Leader election (leases)
+    # - Creating events
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: kube-system
+          podSelector:
+            matchLabels:
+              component: kube-apiserver
+      ports:
+        - protocol: TCP
+          port: 443   # API server HTTPS
+        - protocol: TCP
+          port: 6443  # Alternative API server port
+    
+    # 2. Allow DNS resolution
+    # Required for service discovery
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53    # DNS
+        - protocol: TCP
+          port: 53    # DNS over TCP
+    
+    # 3. Allow connections to CoreDNS (alternative DNS label)
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: coredns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
