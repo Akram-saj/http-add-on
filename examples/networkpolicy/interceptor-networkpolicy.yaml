@@ -172,5 +172,3 @@ spec:
 #   policyTypes:
 #     - Ingress
 #     - Egress
-
-
