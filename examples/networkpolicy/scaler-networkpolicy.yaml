@@ -26,12 +26,12 @@ spec:
       app.kubernetes.io/instance: external-scaler
       app.kubernetes.io/name: http
       app.kubernetes.io/part-of: keda
-  
+
   # Allow both ingress and egress (default deny all)
   policyTypes:
     - Ingress
     - Egress
-  
+
   ingress:
     # 1. Allow gRPC connections from KEDA operator
     # KEDA calls the external scaler to get metrics
@@ -45,7 +45,7 @@ spec:
       ports:
         - protocol: TCP
           port: 9090  # gRPC service
-    
+
     # 2. Allow Kubernetes health probes
     # Kubelet needs to access gRPC health check service
     - from:
@@ -58,7 +58,7 @@ spec:
       ports:
         - protocol: TCP
           port: 9090  # gRPC health probes
-  
+
   egress:
     # 1. Allow connections to Interceptor admin API
     # Scaler fetches queue counts from all interceptor pods
@@ -75,7 +75,7 @@ spec:
       ports:
         - protocol: TCP
           port: 9090  # Interceptor admin API
-    
+
     # 2. Allow Kubernetes API server access
     # Required for watching EndpointSlices, HTTPScaledObjects, InterceptorRoutes
     - to:
@@ -90,7 +90,7 @@ spec:
           port: 443   # API server HTTPS
         - protocol: TCP
           port: 6443  # Alternative API server port
-    
+
     # 3. Allow DNS resolution
     # Required for service discovery
     - to:
@@ -105,7 +105,7 @@ spec:
           port: 53    # DNS
         - protocol: TCP
           port: 53    # DNS over TCP
-    
+
     # 4. Allow connections to CoreDNS (alternative DNS label)
     - to:
         - namespaceSelector:

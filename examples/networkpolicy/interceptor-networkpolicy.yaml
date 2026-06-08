@@ -1,6 +1,6 @@
 ---
 # NetworkPolicy for KEDA HTTP Add-on Interceptor
-# 
+#
 # The Interceptor acts as an HTTP proxy that:
 # - Receives HTTP/HTTPS traffic from ingress controllers or load balancers
 # - Proxies requests to backend application services
@@ -26,12 +26,12 @@ spec:
       app.kubernetes.io/instance: interceptor
       app.kubernetes.io/name: http
       app.kubernetes.io/part-of: keda
-  
+
   # Allow both ingress and egress (default deny all)
   policyTypes:
     - Ingress
     - Egress
-  
+
   ingress:
     # 1. Allow HTTP/HTTPS proxy traffic from ingress controllers
     # This is the main entry point for user traffic
@@ -53,7 +53,7 @@ spec:
           port: 8080  # HTTP proxy
         - protocol: TCP
           port: 8443  # HTTPS proxy
-    
+
     # 2. Allow admin API access from Scaler
     # Scaler fetches queue counts from interceptor admin API
     - from:
@@ -69,7 +69,7 @@ spec:
       ports:
         - protocol: TCP
           port: 9090  # Admin API
-    
+
     # 3. Allow Prometheus metrics scraping
     # Optional: Remove if not using Prometheus monitoring
     - from:
@@ -82,7 +82,7 @@ spec:
       ports:
         - protocol: TCP
           port: 2223  # Metrics
-    
+
     # 4. Allow Kubernetes health probes
     # Kubelet needs to access liveness/readiness endpoints
     - from:
@@ -95,7 +95,7 @@ spec:
       ports:
         - protocol: TCP
           port: 9090  # Admin API (health endpoints)
-  
+
   egress:
     # 1. Allow connections to backend application services
     # Interceptor proxies requests to actual backend pods
@@ -113,7 +113,7 @@ spec:
           port: 8080  # Common app port
         - protocol: TCP
           port: 8443  # Common app TLS port
-    
+
     # 2. Allow Kubernetes API server access
     # Required for watching Services, EndpointSlices, HTTPScaledObjects, InterceptorRoutes
     - to:
@@ -128,7 +128,7 @@ spec:
           port: 443   # API server HTTPS
         - protocol: TCP
           port: 6443  # Alternative API server port
-    
+
     # 3. Allow DNS resolution
     # Required for service discovery
     - to:
@@ -143,7 +143,7 @@ spec:
           port: 53    # DNS
         - protocol: TCP
           port: 53    # DNS over TCP
-    
+
     # 4. Allow connections to CoreDNS (alternative DNS label)
     - to:
         - namespaceSelector:
@@ -161,7 +161,7 @@ spec:
 ---
 # Optional: Deny-all default policy for the namespace
 # Uncomment to enforce that all pods must have explicit NetworkPolicies
-# 
+#
 # apiVersion: networking.k8s.io/v1
 # kind: NetworkPolicy
 # metadata:
@@ -172,4 +172,5 @@ spec:
 #   policyTypes:
 #     - Ingress
 #     - Egress
+
 

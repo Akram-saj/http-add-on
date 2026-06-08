@@ -27,12 +27,12 @@ spec:
   podSelector:
     matchLabels:
       app: example-app
-  
+
   # Allow both ingress and egress (default deny all)
   policyTypes:
     - Ingress
     - Egress
-  
+
   ingress:
     # 1. Allow HTTP traffic from KEDA HTTP Add-on Interceptor
     # The Interceptor proxies requests to your application
@@ -49,7 +49,7 @@ spec:
       ports:
         - protocol: TCP
           port: 8080  # Your application port
-    
+
     # 2. Allow Kubernetes health probes
     # Kubelet needs to access liveness/readiness endpoints
     - from:
@@ -62,7 +62,7 @@ spec:
       ports:
         - protocol: TCP
           port: 8080  # Your application port
-    
+
     # 3. Optional: Allow Prometheus metrics scraping
     # Uncomment if your application exposes Prometheus metrics
     # - from:
@@ -75,7 +75,7 @@ spec:
     #   ports:
     #     - protocol: TCP
     #       port: 9090  # Metrics port
-  
+
   egress:
     # 1. Allow connections to other services in the same namespace
     # CUSTOMIZE: Restrict to specific services if needed
@@ -88,7 +88,7 @@ spec:
           port: 443
         - protocol: TCP
           port: 8080
-    
+
     # 2. Allow connections to databases
     # Example: PostgreSQL, MySQL, MongoDB
     # CUSTOMIZE: Add your specific database ports and selectors
@@ -102,7 +102,7 @@ spec:
       ports:
         - protocol: TCP
           port: 5432  # PostgreSQL
-    
+
     # 3. Allow connections to external services (internet)
     # CUSTOMIZE: For production, consider using egress gateway
     # or restricting to specific IP ranges
@@ -113,7 +113,7 @@ spec:
           port: 443  # HTTPS
         - protocol: TCP
           port: 80   # HTTP
-    
+
     # 4. Allow DNS resolution
     # Required for service discovery
     - to:
@@ -128,7 +128,7 @@ spec:
           port: 53
         - protocol: TCP
           port: 53
-    
+
     # 5. Allow connections to CoreDNS (alternative DNS label)
     - to:
         - namespaceSelector:
@@ -203,5 +203,6 @@ spec:
 #       ports:
 #         - protocol: UDP
 #           port: 53
+
 
 
