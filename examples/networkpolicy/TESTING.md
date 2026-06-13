@@ -17,7 +17,11 @@ This guide provides step-by-step instructions for testing and verifying the Netw
 3. **Test application deployed**
    ```bash
    kubectl create namespace test-app
-   kubectl apply -f examples/xkcd/ -n test-app
+   # Use helm to install the xkcd example (it's a Helm chart, not raw manifests)
+   helm install xkcd examples/xkcd -n test-app
+   
+   # OR generate manifests first, then apply:
+   # helm template xkcd examples/xkcd -n test-app | kubectl apply -f -
    ```
 
 ## Testing Strategy
@@ -32,16 +36,28 @@ First, verify everything works without NetworkPolicies:
 # 1. Check all pods are running
 kubectl get pods -n keda
 kubectl get pods -n test-app
+# Note: test-app will have 0 pods initially (scale-from-zero)
 
-# 2. Test HTTP request flow
-curl http://<ingress-ip>/test
+# 2. Test HTTP request flow via port-forward
+kubectl port-forward -n keda svc/keda-add-ons-http-interceptor-proxy 8080:8080 &
+sleep 2
+
+# Send request with Host header matching HTTPScaledObject config
+curl -H "Host: myhost.com" http://localhost:8080/path1
+
+# Watch pods scale up from 0 to 1
+kubectl get pods -n test-app -w
+# Press Ctrl+C after pod appears
+
+# Stop port-forward
+pkill -f "port-forward.*8080:8080"
 
 # 3. Check KEDA scaling works
-kubectl get hpa -n test-app
-kubectl get scaledobject -n test-app
+kubectl get httpscaledobject -n test-app
+kubectl describe httpscaledobject xkcd -n test-app
 
 # 4. Verify metrics are collected
-kubectl logs -n keda deployment/keda-add-ons-http-external-scaler
+kubectl logs -n keda deployment/keda-add-ons-http-external-scaler --tail=50
 ```
 
 **Expected**: All components work, requests succeed, scaling functions properly.
@@ -54,7 +70,7 @@ Apply all NetworkPolicies:
 kubectl apply -f examples/networkpolicy/interceptor-networkpolicy.yaml
 kubectl apply -f examples/networkpolicy/operator-networkpolicy.yaml
 kubectl apply -f examples/networkpolicy/scaler-networkpolicy.yaml
-kubectl apply -f examples/networkpolicy/app-networkpolicy.yaml -n test-app
+kubectl apply -f examples/networkpolicy/app-networkpolicy.yaml
 ```
 
 Verify policies are applied:
@@ -70,15 +86,19 @@ Repeat all baseline tests:
 
 ```bash
 # 1. Test HTTP request flow still works
-curl http://<ingress-ip>/test
+kubectl port-forward -n keda svc/keda-add-ons-http-interceptor-proxy 8080:8080 &
+sleep 2
+curl -H "Host: myhost.com" http://localhost:8080/path1
+pkill -f "port-forward.*8080:8080"
 
 # 2. Verify scaling still works
-kubectl get hpa -n test-app
+kubectl get httpscaledobject -n test-app
+kubectl get pods -n test-app
 
 # 3. Check component logs for errors
-kubectl logs -n keda deployment/keda-add-ons-http-interceptor
-kubectl logs -n keda deployment/keda-add-ons-http-operator
-kubectl logs -n keda deployment/keda-add-ons-http-external-scaler
+kubectl logs -n keda deployment/keda-add-ons-http-interceptor --tail=50
+kubectl logs -n keda deployment/keda-add-ons-http-controller-manager --tail=50
+kubectl logs -n keda deployment/keda-add-ons-http-external-scaler --tail=50
 ```
 
 **Expected**: Everything still works exactly as before.

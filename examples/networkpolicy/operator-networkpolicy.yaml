@@ -35,13 +35,21 @@ spec:
   ingress:
     # 1. Allow Prometheus metrics scraping
     # Optional: Remove if not using Prometheus monitoring
+    # NOTE: Adjust namespace/pod selectors to match your Prometheus setup
     - from:
         - namespaceSelector:
             matchLabels:
-              name: monitoring
+              kubernetes.io/metadata.name: monitoring
           podSelector:
             matchLabels:
               app.kubernetes.io/name: prometheus
+        # Alternative: Allow from any namespace with prometheus label
+        - namespaceSelector:
+            matchLabels:
+              name: prometheus
+          podSelector:
+            matchLabels:
+              app: prometheus
       ports:
         - protocol: TCP
           port: 8080  # Metrics HTTP
@@ -49,14 +57,12 @@ spec:
           port: 8443  # Metrics HTTPS
 
     # 2. Allow Kubernetes health probes
-    # Kubelet needs to access liveness/readiness endpoints
+    # Kubelet runs on nodes and doesn't have pod identity in NetworkPolicy
+    # Health probes come from the node IP, not from pods
     - from:
         - namespaceSelector:
             matchLabels:
-              name: kube-system
-          podSelector:
-            matchLabels:
-              component: kubelet
+              kubernetes.io/metadata.name: kube-system
       ports:
         - protocol: TCP
           port: 8081  # Health probes
@@ -68,13 +74,18 @@ spec:
     # - Creating/updating ScaledObjects
     # - Leader election (leases)
     # - Creating events
+    # API server is typically accessed via service IP, not pod IP
     - to:
         - namespaceSelector:
             matchLabels:
-              name: kube-system
+              kubernetes.io/metadata.name: default
           podSelector:
             matchLabels:
-              component: kube-apiserver
+              component: apiserver
+        # Also allow to kube-system namespace for API server
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
       ports:
         - protocol: TCP
           port: 443   # API server HTTPS
@@ -86,26 +97,19 @@ spec:
     - to:
         - namespaceSelector:
             matchLabels:
-              name: kube-system
+              kubernetes.io/metadata.name: kube-system
           podSelector:
             matchLabels:
               k8s-app: kube-dns
-      ports:
-        - protocol: UDP
-          port: 53    # DNS
-        - protocol: TCP
-          port: 53    # DNS over TCP
-
-    # 3. Allow connections to CoreDNS (alternative DNS label)
-    - to:
+        # Also allow CoreDNS (alternative DNS implementation)
         - namespaceSelector:
             matchLabels:
-              name: kube-system
+              kubernetes.io/metadata.name: kube-system
           podSelector:
             matchLabels:
               k8s-app: coredns
       ports:
         - protocol: UDP
-          port: 53
+          port: 53    # DNS
         - protocol: TCP
-          port: 53
+          port: 53    # DNS over TCP

@@ -1,0 +1,103 @@
+---
+# NetworkPolicy for xkcd Test Application
+#
+# This is a customized NetworkPolicy for the xkcd example app
+# to demonstrate how users should configure policies for their applications.
+#
+# This policy:
+# - Allows traffic from KEDA HTTP Add-on Interceptor
+# - Allows DNS resolution
+# - Restricts all other traffic
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: xkcd-app
+  namespace: test-app
+  labels:
+    app.kubernetes.io/name: xkcd
+spec:
+  # Apply policy to xkcd app pods
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: xkcd
+      app.kubernetes.io/instance: xkcd
+
+  # Allow both ingress and egress (default deny all)
+  policyTypes:
+    - Ingress
+    - Egress
+
+  ingress:
+    # 1. Allow HTTP traffic from KEDA HTTP Add-on Interceptor
+    # The interceptor proxies user requests to the application
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: keda
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/component: add-on
+              app.kubernetes.io/instance: interceptor
+              app.kubernetes.io/name: http
+              app.kubernetes.io/part-of: keda
+      ports:
+        - protocol: TCP
+          port: 8080  # Application port
+
+    # 2. Allow health probes from Kubernetes
+    # Kubelet needs to check if the app is healthy
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: TCP
+          port: 8080  # Health check port
+
+  egress:
+    # 1. Allow DNS resolution
+    # Required for the app to resolve service names
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: coredns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+
+    # 2. Allow outbound HTTP/HTTPS (if your app needs to call external APIs)
+    # Comment out if your app doesn't need external access
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 80
+        - protocol: TCP
+          port: 443
+
+    # 3. Allow access to other services in the cluster (if needed)
+    # Customize this based on your app's requirements
+    # Example: Allow access to a database in another namespace
+    # - to:
+    #     - namespaceSelector:
+    #         matchLabels:
+    #           name: database
+    #       podSelector:
+    #         matchLabels:
+    #           app: postgres
+    #   ports:
+    #     - protocol: TCP
+    #       port: 5432
+
+# Made with Bob

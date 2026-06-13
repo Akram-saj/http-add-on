@@ -35,11 +35,9 @@ spec:
   ingress:
     # 1. Allow gRPC connections from KEDA operator
     # KEDA calls the external scaler to get metrics
+    # IMPORTANT: Only KEDA operator pods in the same namespace should access this
     - from:
-        - namespaceSelector:
-            matchLabels:
-              name: keda
-          podSelector:
+        - podSelector:
             matchLabels:
               app: keda-operator
       ports:
@@ -47,26 +45,21 @@ spec:
           port: 9090  # gRPC service
 
     # 2. Allow Kubernetes health probes
-    # Kubelet needs to access gRPC health check service
+    # Kubelet runs on nodes and doesn't have pod identity in NetworkPolicy
+    # Health probes come from the node IP, not from pods
     - from:
         - namespaceSelector:
             matchLabels:
-              name: kube-system
-          podSelector:
-            matchLabels:
-              component: kubelet
+              kubernetes.io/metadata.name: kube-system
       ports:
         - protocol: TCP
           port: 9090  # gRPC health probes
 
   egress:
     # 1. Allow connections to Interceptor admin API
-    # Scaler fetches queue counts from all interceptor pods
+    # Scaler fetches queue counts from all interceptor pods in the same namespace
     - to:
-        - namespaceSelector:
-            matchLabels:
-              name: keda
-          podSelector:
+        - podSelector:
             matchLabels:
               app.kubernetes.io/component: add-on
               app.kubernetes.io/instance: interceptor
@@ -78,13 +71,18 @@ spec:
 
     # 2. Allow Kubernetes API server access
     # Required for watching EndpointSlices, HTTPScaledObjects, InterceptorRoutes
+    # API server is typically accessed via service IP, not pod IP
     - to:
         - namespaceSelector:
             matchLabels:
-              name: kube-system
+              kubernetes.io/metadata.name: default
           podSelector:
             matchLabels:
-              component: kube-apiserver
+              component: apiserver
+        # Also allow to kube-system namespace for API server
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
       ports:
         - protocol: TCP
           port: 443   # API server HTTPS
@@ -96,26 +94,19 @@ spec:
     - to:
         - namespaceSelector:
             matchLabels:
-              name: kube-system
+              kubernetes.io/metadata.name: kube-system
           podSelector:
             matchLabels:
               k8s-app: kube-dns
-      ports:
-        - protocol: UDP
-          port: 53    # DNS
-        - protocol: TCP
-          port: 53    # DNS over TCP
-
-    # 4. Allow connections to CoreDNS (alternative DNS label)
-    - to:
+        # Also allow CoreDNS (alternative DNS implementation)
         - namespaceSelector:
             matchLabels:
-              name: kube-system
+              kubernetes.io/metadata.name: kube-system
           podSelector:
             matchLabels:
               k8s-app: coredns
       ports:
         - protocol: UDP
-          port: 53
+          port: 53    # DNS
         - protocol: TCP
-          port: 53
+          port: 53    # DNS over TCP

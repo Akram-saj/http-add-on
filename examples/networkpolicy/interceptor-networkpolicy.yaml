@@ -56,11 +56,9 @@ spec:
 
     # 2. Allow admin API access from Scaler
     # Scaler fetches queue counts from interceptor admin API
+    # IMPORTANT: Only scaler pods in the same namespace should access this
     - from:
-        - namespaceSelector:
-            matchLabels:
-              name: keda
-          podSelector:
+        - podSelector:
             matchLabels:
               app.kubernetes.io/component: add-on
               app.kubernetes.io/instance: external-scaler
@@ -72,26 +70,33 @@ spec:
 
     # 3. Allow Prometheus metrics scraping
     # Optional: Remove if not using Prometheus monitoring
+    # NOTE: Adjust namespace/pod selectors to match your Prometheus setup
     - from:
         - namespaceSelector:
             matchLabels:
-              name: monitoring
+              kubernetes.io/metadata.name: monitoring
           podSelector:
             matchLabels:
               app.kubernetes.io/name: prometheus
+        # Alternative: Allow from any namespace with prometheus label
+        - namespaceSelector:
+            matchLabels:
+              name: prometheus
+          podSelector:
+            matchLabels:
+              app: prometheus
       ports:
         - protocol: TCP
           port: 2223  # Metrics
 
     # 4. Allow Kubernetes health probes
-    # Kubelet needs to access liveness/readiness endpoints
+    # Kubelet runs on nodes and doesn't have pod identity in NetworkPolicy
+    # Health probes come from the node IP, not from pods
+    # We need to allow health checks without pod selector
     - from:
         - namespaceSelector:
             matchLabels:
-              name: kube-system
-          podSelector:
-            matchLabels:
-              component: kubelet
+              kubernetes.io/metadata.name: kube-system
       ports:
         - protocol: TCP
           port: 9090  # Admin API (health endpoints)
@@ -116,13 +121,18 @@ spec:
 
     # 2. Allow Kubernetes API server access
     # Required for watching Services, EndpointSlices, HTTPScaledObjects, InterceptorRoutes
+    # API server is typically accessed via service IP, not pod IP
     - to:
         - namespaceSelector:
             matchLabels:
-              name: kube-system
+              kubernetes.io/metadata.name: default
           podSelector:
             matchLabels:
-              component: kube-apiserver
+              component: apiserver
+        # Also allow to kube-system namespace for API server
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
       ports:
         - protocol: TCP
           port: 443   # API server HTTPS
@@ -134,29 +144,22 @@ spec:
     - to:
         - namespaceSelector:
             matchLabels:
-              name: kube-system
+              kubernetes.io/metadata.name: kube-system
           podSelector:
             matchLabels:
               k8s-app: kube-dns
-      ports:
-        - protocol: UDP
-          port: 53    # DNS
-        - protocol: TCP
-          port: 53    # DNS over TCP
-
-    # 4. Allow connections to CoreDNS (alternative DNS label)
-    - to:
+        # Also allow CoreDNS (alternative DNS implementation)
         - namespaceSelector:
             matchLabels:
-              name: kube-system
+              kubernetes.io/metadata.name: kube-system
           podSelector:
             matchLabels:
               k8s-app: coredns
       ports:
         - protocol: UDP
-          port: 53
+          port: 53    # DNS
         - protocol: TCP
-          port: 53
+          port: 53    # DNS over TCP
 
 ---
 # Optional: Deny-all default policy for the namespace
