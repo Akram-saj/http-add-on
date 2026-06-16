@@ -20,12 +20,14 @@ metadata:
     app.kubernetes.io/component: operator
 spec:
   # Apply policy to operator pods
+  # NOTE: These labels match Helm chart deployments
+  # For manual deployments, adjust labels to match your pod labels
   podSelector:
     matchLabels:
-      app.kubernetes.io/component: add-on
-      app.kubernetes.io/instance: operator
-      app.kubernetes.io/name: http
-      app.kubernetes.io/part-of: keda
+      app.kubernetes.io/component: operator
+      app.kubernetes.io/instance: http-add-on
+      app.kubernetes.io/name: http-add-on
+      app.kubernetes.io/part-of: keda-add-ons-http
 
   # Allow both ingress and egress (default deny all)
   policyTypes:
