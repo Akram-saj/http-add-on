@@ -56,10 +56,10 @@ spec:
 
     # 2. Allow admin API access from Scaler (same namespace only)
     # Scaler fetches queue counts from interceptor admin API
-    # IMPORTANT: Empty namespaceSelector {} means "same namespace only"
+    # IMPORTANT: Omitting namespaceSelector means "same namespace only"
+    # Using namespaceSelector: {} would allow from ALL namespaces!
     - from:
-        - namespaceSelector: {}
-          podSelector:
+        - podSelector:
             matchLabels:
               app.kubernetes.io/component: add-on
               app.kubernetes.io/instance: external-scaler
