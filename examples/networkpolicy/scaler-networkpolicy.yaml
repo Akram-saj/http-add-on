@@ -35,9 +35,10 @@ spec:
   ingress:
     # 1. Allow gRPC connections from KEDA operator
     # KEDA calls the external scaler to get metrics
-    # IMPORTANT: Only KEDA operator pods in the same namespace should access this
+    # IMPORTANT: Empty namespaceSelector {} means "same namespace only"
     - from:
-        - podSelector:
+        - namespaceSelector: {}
+          podSelector:
             matchLabels:
               app: keda-operator
       ports:
@@ -58,8 +59,10 @@ spec:
   egress:
     # 1. Allow connections to Interceptor admin API
     # Scaler fetches queue counts from all interceptor pods in the same namespace
+    # IMPORTANT: Empty namespaceSelector {} means "same namespace only"
     - to:
-        - podSelector:
+        - namespaceSelector: {}
+          podSelector:
             matchLabels:
               app.kubernetes.io/component: add-on
               app.kubernetes.io/instance: interceptor

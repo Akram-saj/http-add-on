@@ -56,9 +56,10 @@ spec:
 
     # 2. Allow admin API access from Scaler (same namespace only)
     # Scaler fetches queue counts from interceptor admin API
-    # No namespace selector needed - both are in keda namespace
+    # IMPORTANT: Empty namespaceSelector {} means "same namespace only"
     - from:
-        - podSelector:
+        - namespaceSelector: {}
+          podSelector:
             matchLabels:
               app.kubernetes.io/component: add-on
               app.kubernetes.io/instance: external-scaler
