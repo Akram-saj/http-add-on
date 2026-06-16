@@ -39,7 +39,7 @@ spec:
         # Allow from ingress-nginx namespace
         - namespaceSelector:
             matchLabels:
-              name: ingress-nginx
+              kubernetes.io/metadata.name: ingress-nginx
           podSelector:
             matchLabels:
               app.kubernetes.io/name: ingress-nginx
@@ -54,9 +54,9 @@ spec:
         - protocol: TCP
           port: 8443  # HTTPS proxy
 
-    # 2. Allow admin API access from Scaler
+    # 2. Allow admin API access from Scaler (same namespace only)
     # Scaler fetches queue counts from interceptor admin API
-    # IMPORTANT: Only scaler pods in the same namespace should access this
+    # No namespace selector needed - both are in keda namespace
     - from:
         - podSelector:
             matchLabels:
@@ -81,25 +81,13 @@ spec:
         # Alternative: Allow from any namespace with prometheus label
         - namespaceSelector:
             matchLabels:
-              name: prometheus
+              kubernetes.io/metadata.name: prometheus
           podSelector:
             matchLabels:
               app: prometheus
       ports:
         - protocol: TCP
           port: 2223  # Metrics
-
-    # 4. Allow Kubernetes health probes
-    # Kubelet runs on nodes and doesn't have pod identity in NetworkPolicy
-    # Health probes come from the node IP, not from pods
-    # We need to allow health checks without pod selector
-    - from:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: kube-system
-      ports:
-        - protocol: TCP
-          port: 9090  # Admin API (health endpoints)
 
   egress:
     # 1. Allow connections to backend application services

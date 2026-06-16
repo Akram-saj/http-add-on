@@ -46,7 +46,7 @@ spec:
         # Alternative: Allow from any namespace with prometheus label
         - namespaceSelector:
             matchLabels:
-              name: prometheus
+              kubernetes.io/metadata.name: prometheus
           podSelector:
             matchLabels:
               app: prometheus
