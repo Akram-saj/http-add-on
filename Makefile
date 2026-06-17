@@ -170,6 +170,10 @@ e2e-test-ci: ## Run all e2e tests (CI mode with retries)
 # -parallel 4 limits concurrent tests to avoid overwhelming the kubelet port-forward
 	gotestsum --rerun-fails=2 --format=github-actions --packages="./test/e2e/..." -- -tags e2e -p 1 -count=1 -timeout 30m -v -parallel 4
 
+e2e-test-images: ## Build all test images under test/images/ and push to $KO_DOCKER_REPO
+	# --base-import-paths prevents the hash suffix in image names
+	ko build --base-import-paths ./test/images/*/
+
 e2e-deps: e2e-deps-cert-manager e2e-deps-jaeger e2e-deps-keda e2e-deps-otel-collector ## Install all e2e dependencies
 
 e2e-deps-cert-manager:
@@ -177,34 +181,37 @@ e2e-deps-cert-manager:
 	$(call helm-retry,helm upgrade --install cert-manager jetstack/cert-manager \
 		--namespace cert-manager --create-namespace \
 		-f test/fixtures/cert-manager-values.yaml \
-		--version $(CERT_MANAGER_VERSION) --wait)
+		--version $(CERT_MANAGER_VERSION) --wait --timeout 5m)
 
 e2e-deps-jaeger:
 	helm repo add jaegertracing https://jaegertracing.github.io/helm-charts --force-update
 	$(call helm-retry,helm upgrade --install jaeger jaegertracing/jaeger \
 		--namespace jaeger --create-namespace \
-		--version $(JAEGER_VERSION) --wait)
+		--version $(JAEGER_VERSION) --wait --timeout 5m)
 
 e2e-deps-keda:
 	helm repo add kedacore https://kedacore.github.io/charts --force-update
 	$(call helm-retry,helm upgrade --install keda kedacore/keda \
 		--namespace keda --create-namespace \
-		--version $(KEDA_VERSION) --wait)
+		--version $(KEDA_VERSION) --wait --timeout 5m)
 
 e2e-deps-otel-collector:
 	helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts --force-update
 	$(call helm-retry,helm upgrade --install opentelemetry-collector open-telemetry/opentelemetry-collector \
 		--namespace open-telemetry-system --create-namespace \
 		-f test/fixtures/otel-values.yaml \
-		--version $(OTEL_COLLECTOR_VERSION) --wait)
+		--version $(OTEL_COLLECTOR_VERSION) --wait --timeout 5m)
 
-e2e-setup: e2e-deps deploy ## Full e2e setup: install deps + deploy http-add-on
+e2e-setup: e2e-deps deploy e2e-test-images ## Full e2e setup: install deps + deploy http-add-on + build test images
 
 ##################################################
 # Code generation & manifests                    #
 ##################################################
 
 generate: codegen manifests  ## Generate code and manifests.
+
+generate-proto: ## Generate protobuf and gRPC stubs only used in e2e test images
+	buf generate
 
 codegen: ## Generate DeepCopy method implementations.
 	$(CONTROLLER_GEN) object:headerFile='hack/boilerplate.go.txt' paths='./...'
